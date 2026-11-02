@@ -25,12 +25,22 @@ def fetch_all(key, start, end):
             "inqryEndDt": end.strftime("%Y%m%d%H%M"),
             "numOfRows": 999, "pageNo": page,
         }
-        r = requests.get(URL, params=params, timeout=60)
-        r.raise_for_status()
         try:
-            body = r.json()["response"]["body"]
-        except (ValueError, KeyError):
-            raise SystemExit(f"API 응답 오류: {r.text[:300]}")
+            r = requests.get(URL, params=params, timeout=60)
+        except requests.RequestException as e:
+            raise RuntimeError(f"나라장터 API 접속 실패: {e}")
+        if r.status_code != 200:
+            raise RuntimeError(f"나라장터 API HTTP {r.status_code}: {r.text[:300]}")
+        try:
+            data = r.json()
+        except ValueError:
+            raise RuntimeError(f"나라장터 API 응답 오류(인증키 확인 필요): {r.text[:300]}")
+        header = data.get("response", {}).get("header", {})
+        if header.get("resultCode") not in (None, "00"):
+            raise RuntimeError(f"나라장터 API 오류 {header.get('resultCode')}: {header.get('resultMsg')}")
+        body = data.get("response", {}).get("body")
+        if body is None:
+            raise RuntimeError(f"나라장터 API 응답 형식 오류: {r.text[:300]}")
         batch = body.get("items") or []
         if isinstance(batch, dict):
             batch = batch.get("item", [])
@@ -64,7 +74,17 @@ def main():
     if not key:
         raise SystemExit("G2B_SERVICE_KEY(공공데이터포털 인증키)가 설정되지 않았습니다.")
     now = datetime.now(KST)
-    raw = fetch_all(key, now - timedelta(days=LOOKBACK_DAYS), now)
+    try:
+        raw = fetch_all(key, now - timedelta(days=LOOKBACK_DAYS), now)
+    except RuntimeError as e:
+        print(f"::error::{e}")
+        OUT.mkdir(exist_ok=True)
+        (OUT / "index.html").write_text(
+            '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<title>하이코두 입찰 대시보드</title><body style="font-family:sans-serif;padding:20px">'
+            f'<h2>갱신 실패 ({now:%Y-%m-%d %H:%M})</h2><pre style="white-space:pre-wrap">{html.escape(str(e))}</pre></body>',
+            encoding="utf-8")
+        return
 
     seen, rows = set(), []
     for it in raw:
