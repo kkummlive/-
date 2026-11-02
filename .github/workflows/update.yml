@@ -6,6 +6,9 @@ on:
     - cron: "0 23 * * *"
     - cron: "0 2,4,7,10 * * *"
   workflow_dispatch: {}   # Actions 탭에서 '지금 실행' 버튼
+  push:                   # 필터·코드를 고치면 바로 다시 갱신
+    branches: [main]
+    paths: ["scripts/**", ".github/workflows/**"]
 
 permissions:
   contents: write
