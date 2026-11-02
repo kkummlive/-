@@ -1,0 +1,32 @@
+name: 나라장터 대시보드 갱신
+
+on:
+  schedule:
+    # GitHub 예약 시간은 UTC 기준 → 한국시간 08·11·13·16·19시
+    - cron: "0 23 * * *"
+    - cron: "0 2,4,7,10 * * *"
+  workflow_dispatch: {}   # Actions 탭에서 '지금 실행' 버튼
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - name: 공고 수집 및 대시보드 생성
+        env:
+          G2B_SERVICE_KEY: ${{ secrets.G2B_SERVICE_KEY }}
+        run: python scripts/fetch.py
+      - name: 변경 내용 저장
+        run: |
+          git config user.name "dashboard-bot"
+          git config user.email "dashboard-bot@users.noreply.github.com"
+          git add docs
+          git diff --cached --quiet || git commit -m "대시보드 갱신 $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M')"
+          git push
