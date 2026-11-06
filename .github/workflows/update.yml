@@ -1,14 +1,8 @@
 name: 나라장터 대시보드 갱신
 
 on:
-  schedule:
-    # GitHub 예약 시간은 UTC 기준 → 한국시간 08·11·13·16·19시
-    - cron: "0 23 * * *"
-    - cron: "0 2,4,7,10 * * *"
-  workflow_dispatch: {}   # Actions 탭에서 '지금 실행' 버튼
-  push:                   # 필터·코드를 고치면 바로 다시 갱신
-    branches: [main]
-    paths: ["scripts/**", ".github/workflows/**"]
+  # 자동 실행 중지됨 (2026-11-06). 다시 켜려면 schedule 설정을 복구하세요.
+  workflow_dispatch: {}
 
 permissions:
   contents: write
